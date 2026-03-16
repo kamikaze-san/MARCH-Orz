@@ -213,5 +213,5 @@ def run_autonomous_agent(start_url, goal, max_steps=10):
 
 if __name__ == "__main__":
     # The ultimate test: A multi-step sequence
-    test_goal = "Go to pewdiepie's channel and click subscribe button. "
+    test_goal = "Go to pewdiepie's channel and play the latest video. "
     run_autonomous_agent("https://www.youtube.com", test_goal)
