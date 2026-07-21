@@ -15,6 +15,7 @@ import re
 import time
 import sys
 import os
+import argparse
 
 # ---------------------------------------------------------------
 # Force unbuffered stdout so logs print in real-time
@@ -33,6 +34,30 @@ from policy import reason, perceive, verify, is_step_complete, call_llm
 def _print(msg):
     """Print with immediate flush so logs appear in real-time in CMD."""
     print(msg, flush=True)
+
+
+def wait_for_page_settle(agent, action_type):
+    """Give slow navigations and JS-heavy pages time before verification."""
+    if action_type == "type":
+        _print("  [VERIFY] Waiting for page to settle after Enter ...")
+        timeout_ms = 10000
+        cushion = 1.5
+    else:
+        _print("  [VERIFY] Waiting for page/UI to settle ...")
+        timeout_ms = 7000
+        cushion = 1.0
+
+    try:
+        agent.page.wait_for_load_state("domcontentloaded", timeout=timeout_ms)
+    except Exception:
+        pass
+
+    try:
+        agent.page.wait_for_load_state("networkidle", timeout=timeout_ms)
+    except Exception:
+        pass
+
+    time.sleep(cushion)
 
 
 # ---------------------------------------------------------------
@@ -292,11 +317,7 @@ def run_autonomous_agent(start_url, goal, max_steps=10):
         # ========================================
         # type actions press Enter → page navigates → need longer settle time
         # click actions just interact with the DOM → short settle is fine
-        if action_type == "type":
-            _print("  [VERIFY] Waiting for page to settle after Enter ...")
-            time.sleep(2.5)
-        else:
-            time.sleep(1.0)
+        wait_for_page_settle(agent, action_type)
 
         _print("  [VERIFY] Capturing after-state ...")
         after_b64, _ = agent.capture_vision_state()
@@ -358,5 +379,14 @@ def run_autonomous_agent(start_url, goal, max_steps=10):
 # ---------------------------------------------------------------
 
 if __name__ == "__main__":
-    test_goal = "Go to pewdiepie's channel and play his latest video. If you see an AD playing, wait for sometime till the skip button appears and click it."
-    run_autonomous_agent("https://www.youtube.com", test_goal, max_steps=15)
+    # Legacy hardcoded smoke test:
+    # test_goal = "Go to pewdiepie's channel and play his latest video. If you see an AD playing, wait for sometime till the skip button appears and click it."
+    # run_autonomous_agent("https://www.youtube.com", test_goal, max_steps=15)
+
+    parser = argparse.ArgumentParser(description="Run the structured vision browser automation loop.")
+    parser.add_argument("--url", required=True, help="Starting URL for the task.")
+    parser.add_argument("--goal", required=True, help="Natural-language task for the agent.")
+    parser.add_argument("--max-steps", type=int, default=15, help="Maximum automation steps.")
+    args = parser.parse_args()
+
+    run_autonomous_agent(args.url, args.goal, max_steps=args.max_steps)
