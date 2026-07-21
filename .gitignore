@@ -21,6 +21,9 @@ molmo-venv/
 molmoweb/
 molmoweb_extension/
 
+# Claude Code local config
+.claude/
+
 # OS/editor cruft
 .DS_Store
 Thumbs.db
